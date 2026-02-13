@@ -3,33 +3,60 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+type ValidateResponse =
+  | { success: true; studentData: Record<string, unknown> }
+  | { success: false; error: string };
+
 export default function LoginPage() {
   const [regNumber, setRegNumber] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError('');
 
     const value = regNumber.trim();
 
-    const studentPattern = /^(RC|RH)\/CH\d+\/(DA|CS|UI|SP|DM)\/\d+$/;
     const teacherPattern = /^TCH\/[A-Z0-9]+$/;
 
+    // Teacher logic remains unchanged for now.
     if (teacherPattern.test(value)) {
       router.push('/teacher/dashboard');
       return;
     }
 
-    if (studentPattern.test(value)) {
-      router.push('/student/dashboard');
+    if (!value) {
+      setError('Please enter your registration number.');
       return;
     }
 
-    setError(
-      'Invalid registration number. Please report to your course supervisor for clarification.'
-    );
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationNumber: value }),
+      });
+
+      const data = (await res.json()) as ValidateResponse;
+
+      if (data.success) {
+        router.push('/student/dashboard');
+        return;
+      }
+
+      setError(
+        data.error ||
+          'Invalid registration number. Please report to your course supervisor for clarification.'
+      );
+    } catch {
+      setError('Something went wrong. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -65,9 +92,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-lg bg-white text-black font-medium hover:bg-zinc-200 transition"
+            disabled={isLoading}
+            className="w-full py-3 rounded-lg bg-white text-black font-medium hover:bg-zinc-200 transition disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Sign In
+            {isLoading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
 
