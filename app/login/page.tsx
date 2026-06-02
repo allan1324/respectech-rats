@@ -1,19 +1,16 @@
-'use client';
-
-import { useSearchParams } from 'next/navigation';
-import { useFormStatus } from 'react-dom';
 import { login } from './actions';
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
+type LoginPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
+function SubmitButton() {
   return (
     <button
       type="submit"
-      disabled={pending}
       className="w-full relative overflow-hidden py-4 rounded-xl bg-white text-zinc-900 font-semibold text-sm hover:bg-zinc-100 transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      {pending ? 'Signing in…' : 'Sign In'}
+      Sign In
     </button>
   );
 }
@@ -33,9 +30,10 @@ function getErrorMessage(error: string | null) {
   }
 }
 
-export default function LoginPage() {
-  const searchParams = useSearchParams();
-  const error = getErrorMessage(searchParams.get('error'));
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = searchParams ? await searchParams : undefined;
+  const errorParam = params?.error;
+  const error = getErrorMessage(typeof errorParam === 'string' ? errorParam : null);
 
   return (
     <main className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 overflow-hidden relative">

@@ -8,11 +8,28 @@ export default async function StudentDashboardIndex() {
 
   const { data: student } = await supabase
     .from('students')
-    .select('class_id, classes(slug)')
+    .select('class_id')
     .eq('profile_id', profile.id)
     .maybeSingle();
 
-  const slug = student?.classes && !Array.isArray(student.classes) ? student.classes.slug : null;
+  if (!student?.class_id) {
+    return (
+      <div>
+        <h2 className="text-3xl font-semibold">Student Dashboard</h2>
+        <p className="text-zinc-400 mt-2">
+          Your student account exists, but no class assignment has been linked yet.
+        </p>
+      </div>
+    );
+  }
+
+  const { data: classRecord } = await supabase
+    .from('classes')
+    .select('slug')
+    .eq('id', student.class_id)
+    .maybeSingle();
+
+  const slug = classRecord?.slug ?? null;
 
   if (!slug) {
     return (

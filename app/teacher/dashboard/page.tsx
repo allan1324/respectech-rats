@@ -29,12 +29,29 @@ export default async function TeacherDashboardIndex() {
 
   const { data: assignment } = await supabase
     .from('teacher_class_assignments')
-    .select('classes(slug)')
+    .select('class_id')
     .eq('teacher_id', teacher.id)
     .limit(1)
     .maybeSingle();
 
-  const slug = assignment?.classes && !Array.isArray(assignment.classes) ? assignment.classes.slug : null;
+  if (!assignment?.class_id) {
+    return (
+      <div>
+        <h2 className="text-3xl font-semibold">Teacher Dashboard</h2>
+        <p className="text-zinc-400 mt-2">
+          No class has been assigned to your teacher account yet.
+        </p>
+      </div>
+    );
+  }
+
+  const { data: classRecord } = await supabase
+    .from('classes')
+    .select('slug')
+    .eq('id', assignment.class_id)
+    .maybeSingle();
+
+  const slug = classRecord?.slug ?? null;
 
   if (!slug) {
     return (
