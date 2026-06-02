@@ -1,0 +1,50 @@
+[
+  {
+    "firstName": "Test",
+    "lastName": "SoftwareProgramming",
+    "registrationNumber": "RC/SP/001",
+    "email": "sp@test.com",
+    "phone": "07000000001",
+    "classSlug": "software-programming"
+  },
+  {
+    "firstName": "Test",
+    "lastName": "DataAnalytics",
+    "registrationNumber": "RC/DA/001",
+    "email": "da@test.com",
+    "phone": "07000000002",
+    "classSlug": "data-analytics"
+  },
+  {
+    "firstName": "Test",
+    "lastName": "CyberSecurity",
+    "registrationNumber": "RC/CS/001",
+    "email": "cs@test.com",
+    "phone": "07000000003",
+    "classSlug": "cybersecurity"
+  },
+  {
+    "firstName": "Test",
+    "lastName": "ArtificialIntelligence",
+    "registrationNumber": "RC/AI/001",
+    "email": "ai@test.com",
+    "phone": "07000000004",
+    "classSlug": "artificial-intelligence"
+  },
+  {
+    "firstName": "Test",
+    "lastName": "UIUX",
+    "registrationNumber": "RC/UI/001",
+    "email": "ui@test.com",
+    "phone": "07000000005",
+    "classSlug": "ui-ux"
+  },
+  {
+    "firstName": "Test",
+    "lastName": "DigitalMarketing",
+    "registrationNumber": "RC/DM/001",
+    "email": "dm@test.com",
+    "phone": "07000000006",
+    "classSlug": "digital-marketing"
+  }
+]

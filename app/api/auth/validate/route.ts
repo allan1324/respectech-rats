@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
-
-import {
-  validateRegistrationNumber,
-  type StudentData,
-} from "@/lib/registrationValidation";
+import path from "path";
+import { promises as fs } from "fs";
 
 type ValidateRequestBody = {
   registrationNumber?: unknown;
+};
+
+type StudentRecord = {
+  firstName: string;
+  lastName: string;
+  registrationNumber: string;
+  email: string;
+  phone: string;
+  classSlug: string;
 };
 
 export async function POST(req: Request) {
@@ -24,11 +30,31 @@ export async function POST(req: Request) {
   const registrationNumber =
     typeof body.registrationNumber === "string" ? body.registrationNumber : "";
 
-  const studentData: StudentData | null = await validateRegistrationNumber(
-    registrationNumber,
+  if (!registrationNumber.trim()) {
+    return NextResponse.json(
+      { success: false, error: "Invalid registration number" },
+      { status: 200 },
+    );
+  }
+
+  const filePath = path.join(process.cwd(), "data", "students.json");
+
+  let students: StudentRecord[] = [];
+  try {
+    const raw = await fs.readFile(filePath, "utf8");
+    students = JSON.parse(raw) as StudentRecord[];
+  } catch {
+    return NextResponse.json(
+      { success: false, error: "Student registry unavailable" },
+      { status: 500 },
+    );
+  }
+
+  const found = students.find(
+    (s) => s.registrationNumber.trim() === registrationNumber.trim(),
   );
 
-  if (!studentData) {
+  if (!found) {
     return NextResponse.json(
       { success: false, error: "Invalid registration number" },
       { status: 200 },
@@ -36,11 +62,19 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json(
-    { success: true, studentData },
+    {
+      success: true,
+      studentData: {
+        registrationNumber: found.registrationNumber,
+        fullName: `${found.firstName} ${found.lastName}`,
+        email: found.email,
+        phone: found.phone,
+        classSlug: found.classSlug,
+      },
+    },
     {
       status: 200,
       headers: {
-        // Prevent caching of validation responses
         "Cache-Control": "no-store",
       },
     },

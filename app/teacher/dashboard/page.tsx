@@ -1,80 +1,93 @@
 'use client';
 
-export default function TeacherDashboard() {
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+type TeacherValidateResponse =
+  | { success: true; classSlug: string }
+  | { success: false; error: string };
+
+export default function TeacherDashboardIndex() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const router = useRouter();
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+
+    const fn = firstName.trim();
+    const ln = lastName.trim();
+
+    if (!fn || !ln) {
+      setError('Please enter first and last name.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/teacher/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName: fn, lastName: ln }),
+      });
+
+      const data = (await res.json()) as TeacherValidateResponse;
+
+      if (data.success) {
+        router.push(`/teacher/dashboard/${data.classSlug}`);
+        return;
+      }
+
+      setError(data.error || 'Teacher not found.');
+    } catch {
+      setError('Something went wrong. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
-    <div className="min-h-screen flex bg-zinc-900 text-zinc-100">
+    <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-100">
+      <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-lg">
+        <h1 className="text-2xl font-bold mb-2">Teacher Login</h1>
+        <p className="text-zinc-400 text-sm mb-8">Respectech Instructor Portal</p>
 
-      {/* Sidebar */}
-      <aside className="w-64 bg-zinc-950 border-r border-zinc-800 p-6">
-        <h1 className="text-xl font-bold mb-8">
-          Respectech
-        </h1>
-
-        <nav className="space-y-4">
-          <div className="text-sm text-zinc-400 uppercase tracking-wide">
-            Teacher Menu
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div>
+            <label className="block text-sm mb-2 text-zinc-300">First name</label>
+            <input
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white"
+              placeholder="e.g. Janice"
+            />
+          </div>
+          <div>
+            <label className="block text-sm mb-2 text-zinc-300">Last name</label>
+            <input
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white"
+              placeholder="e.g. SoftwareProgramming"
+            />
           </div>
 
-          <button className="block w-full text-left px-3 py-2 rounded bg-zinc-800">
-            Dashboard
+          {error ? <p className="text-red-500 text-sm">{error}</p> : null}
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-3 rounded-lg bg-white text-black font-medium hover:bg-zinc-200 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isLoading ? 'Signing in…' : 'Sign in'}
           </button>
-
-          <button className="block w-full text-left px-3 py-2 rounded hover:bg-zinc-800">
-            Create Test
-          </button>
-
-          <button className="block w-full text-left px-3 py-2 rounded hover:bg-zinc-800">
-            Assignments
-          </button>
-
-          <button className="block w-full text-left px-3 py-2 rounded hover:bg-zinc-800">
-            Review Submissions
-          </button>
-        </nav>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 p-8 bg-zinc-900">
-        <header className="mb-8">
-          <h2 className="text-3xl font-semibold">
-            Teacher Dashboard
-          </h2>
-          <p className="text-zinc-400 mt-1">
-            Manage tests, assignments, and student submissions
-          </p>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          
-          <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-6">
-            <h3 className="text-lg font-semibold mb-2">
-              Create Tests
-            </h3>
-            <p className="text-zinc-400 text-sm">
-              Set up tests and control when students can access them.
-            </p>
-          </div>
-
-          <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-6">
-            <h3 className="text-lg font-semibold mb-2">
-              Assignments
-            </h3>
-            <p className="text-zinc-400 text-sm">
-              Create assignments and provide reference examples.
-            </p>
-          </div>
-
-          <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-6">
-            <h3 className="text-lg font-semibold mb-2">
-              Review & Grade
-            </h3>
-            <p className="text-zinc-400 text-sm">
-              Review submissions and trigger automated grading.
-            </p>
-          </div>
-
-        </div>
-      </main>
+        </form>
+      </div>
     </div>
   );
 }

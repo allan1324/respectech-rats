@@ -1,0 +1,8 @@
+[
+  { "firstName": "Janice", "lastName": "SoftwareProgramming", "classSlug": "software-programming" },
+  { "firstName": "Janice", "lastName": "DataAnalytics", "classSlug": "data-analytics" },
+  { "firstName": "Janice", "lastName": "CyberSecurity", "classSlug": "cybersecurity" },
+  { "firstName": "Janice", "lastName": "ArtificialIntelligence", "classSlug": "artificial-intelligence" },
+  { "firstName": "Janice", "lastName": "UIUX", "classSlug": "ui-ux" },
+  { "firstName": "Janice", "lastName": "DigitalMarketing", "classSlug": "digital-marketing" }
+]

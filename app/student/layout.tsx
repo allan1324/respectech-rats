@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 export default function StudentLayout({
   children,
 }: {
@@ -7,49 +9,42 @@ export default function StudentLayout({
 }) {
   return (
     <div className="min-h-screen flex bg-zinc-900 text-zinc-100">
-
-      {/* Sidebar */}
       <aside className="w-64 bg-zinc-950 border-r border-zinc-800 p-6">
-        <h1 className="text-xl font-bold mb-8">
-          Respectech
-        </h1>
+        <h1 className="text-xl font-bold mb-2">Respectech</h1>
+        <p className="text-xs text-zinc-500 mb-8">RATS Student Portal</p>
 
         <nav className="space-y-4">
-          <a
+          <Link
             href="/student/dashboard"
             className="block w-full text-left px-3 py-2 rounded hover:bg-zinc-800"
           >
             Dashboard
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/student/tests"
             className="block w-full text-left px-3 py-2 rounded hover:bg-zinc-800"
           >
             Tests
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/student/assignments"
             className="block w-full text-left px-3 py-2 rounded hover:bg-zinc-800"
           >
             Assignments
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/student/results"
             className="block w-full text-left px-3 py-2 rounded hover:bg-zinc-800"
           >
             Results
-          </a>
+          </Link>
         </nav>
       </aside>
 
-      {/* Page content */}
-      <main className="flex-1 p-8">
-        {children}
-      </main>
-
+      <main className="flex-1 p-8">{children}</main>
     </div>
   );
 }

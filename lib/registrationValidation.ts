@@ -7,6 +7,8 @@ export type StudentData = {
   course: string;
 };
 
+// (test credentials moved to lib/testCredentials.ts to avoid client importing googleapis)
+
 function getRequiredEnv(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`Missing required env var: ${name}`);
@@ -42,14 +44,40 @@ export async function validateRegistrationNumber(
 
   const sheets = google.sheets({ version: "v4", auth });
 
+  const range = "A:Z";
+
+  // Temporary debug logging (controlled diagnostic)
+  console.log("[validateRegistrationNumber] env.GOOGLE_SHEET_ID defined?", Boolean(process.env.GOOGLE_SHEET_ID));
+  console.log("[validateRegistrationNumber] spreadsheetId=", spreadsheetId);
+  console.log("[validateRegistrationNumber] range=", range);
+
   // Read the whole first sheet (tab) as values.
   // You can narrow this later once the exact tab name / columns are fixed.
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: "A:Z",
-  });
-
-  const values = res.data.values ?? [];
+  let values: unknown[][] = [];
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range,
+    });
+    values = (res.data.values ?? []) as unknown[][];
+  } catch (err: unknown) {
+    const e = err as {
+      message?: unknown;
+      code?: unknown;
+      status?: unknown;
+      response?: { data?: unknown };
+    };
+    console.error("[validateRegistrationNumber] sheets.values.get error:", {
+      message: typeof e?.message === "string" ? e.message : "unknown",
+      code: typeof e?.code === "string" || typeof e?.code === "number" ? e.code : undefined,
+      status:
+        typeof e?.status === "string" || typeof e?.status === "number" ? e.status : undefined,
+    });
+    if (e?.response?.data) {
+      console.error("[validateRegistrationNumber] error.response.data:", e.response.data);
+    }
+    throw err;
+  }
 
   for (const row of values) {
     // Expect at minimum: A=Full Name, B=Email, C=Course code (used as reg match)
