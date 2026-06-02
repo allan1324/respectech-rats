@@ -1,6 +1,12 @@
-import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
+import { getCurrentProfile, getDefaultRouteForRole } from '@/lib/auth';
 
-export default function Page() {
-  // Production-safe server-side redirect (Next.js App Router).
-  redirect("/login");
+export default async function Page() {
+  const profile = await getCurrentProfile();
+
+  if (!profile) {
+    redirect('/login');
+  }
+
+  redirect(getDefaultRouteForRole(profile.role));
 }

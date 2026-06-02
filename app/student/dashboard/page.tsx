@@ -1,18 +1,29 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { requireRole } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { CLASSES } from '../../../lib/classes';
+export default async function StudentDashboardIndex() {
+  const profile = await requireRole(['student']);
+  const supabase = await createClient();
 
-export default function StudentDashboardIndex() {
-  const router = useRouter();
+  const { data: student } = await supabase
+    .from('students')
+    .select('class_id, classes(slug)')
+    .eq('profile_id', profile.id)
+    .maybeSingle();
 
-  useEffect(() => {
-    const first = CLASSES[0];
-    if (first) {
-      router.replace(`/student/dashboard/${first.slug}`);
-    }
-  }, [router]);
+  const slug = student?.classes && !Array.isArray(student.classes) ? student.classes.slug : null;
 
-  return null;
+  if (!slug) {
+    return (
+      <div>
+        <h2 className="text-3xl font-semibold">Student Dashboard</h2>
+        <p className="text-zinc-400 mt-2">
+          Your student account exists, but no class assignment has been linked yet.
+        </p>
+      </div>
+    );
+  }
+
+  redirect(`/student/dashboard/${slug}`);
 }
