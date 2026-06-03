@@ -30,6 +30,7 @@ export function UpdateUserForm({
   const [classSlug, setClassSlug] = useState(initialClassSlug);
   const [registrationNumber, setRegistrationNumber] = useState(initialRegistrationNumber);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const requiresClass = role === 'student' || role === 'teacher';
@@ -44,6 +45,7 @@ export function UpdateUserForm({
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
+    setSuccess('');
 
     if (requiresClass && !classSlug) {
       setError('Please select a class for teacher and student accounts.');
@@ -69,6 +71,7 @@ export function UpdateUserForm({
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          Accept: 'application/json',
         },
         body: payload.toString(),
       });
@@ -82,7 +85,11 @@ export function UpdateUserForm({
       }
 
       const message = result.success ?? 'User updated successfully.';
-      window.location.href = `/admin?success=${encodeURIComponent(message)}`;
+      setSuccess(message);
+      setSubmitting(false);
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 700);
     } catch {
       setError('Something went wrong while updating the user.');
       setSubmitting(false);
@@ -154,6 +161,12 @@ export function UpdateUserForm({
       {error ? (
         <div className="rounded-xl border border-red-700/40 bg-red-950/40 px-4 py-3 text-sm text-red-300">
           {error}
+        </div>
+      ) : null}
+
+      {success ? (
+        <div className="rounded-xl border border-emerald-700/40 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-300">
+          {success}
         </div>
       ) : null}
 
