@@ -262,19 +262,21 @@ export async function updateUser(formData: FormData) {
   }
 
   const adminSupabase = createAdminClient();
+  const serverSupabase = await createClient();
   const classRecord = await getClassRecord(classSlug);
 
   if (classSlug && !classRecord?.id) {
     redirect(buildError('Selected class could not be found.'));
   }
 
-  const { error: profileError } = await adminSupabase
+  const { data: existingProfile, error: existingProfileError } = await serverSupabase
     .from('profiles')
-    .update({ role, status })
-    .eq('id', userId);
+    .select('id, email, role, status')
+    .eq('id', userId)
+    .maybeSingle();
 
-  if (profileError) {
-    redirect(buildError(profileError.message));
+  if (existingProfileError || !existingProfile?.id) {
+    redirect(buildError(existingProfileError?.message ?? 'Target profile could not be found.'));
   }
 
   try {
@@ -287,12 +289,36 @@ export async function updateUser(formData: FormData) {
     if (role === 'teacher' && classRecord?.id) {
       await ensureTeacherAssignment(adminSupabase, userId, classRecord.id);
     }
+
+    const { error: profileError } = await adminSupabase
+      .from('profiles')
+      .update({ role, status })
+      .eq('id', userId);
+
+    if (profileError) {
+      throw new Error(profileError.message);
+    }
+
+    const { data: verifiedProfile, error: verifiedProfileError } = await serverSupabase
+      .from('profiles')
+      .select('id, role, status')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (verifiedProfileError || !verifiedProfile?.id) {
+      throw new Error(verifiedProfileError?.message ?? 'Updated profile could not be verified.');
+    }
+
+    if (verifiedProfile.role !== role || verifiedProfile.status !== status) {
+      throw new Error('Profile update did not persist the new role/status.');
+    }
   } catch (error) {
-    redirect(buildError(error instanceof Error ? error.message : 'Failed to update user links.'));
+    const message = error instanceof Error ? error.message : 'Failed to update user.';
+    redirect(buildError(message));
   }
 
   revalidatePath('/admin');
-  redirect(buildSuccess('User updated successfully.'));
+  redirect(buildSuccess(`Updated user to ${role} (${status}).`));
 }
 
 export async function resetUserPassword(formData: FormData) {
