@@ -27,6 +27,105 @@ function buildSuccess(message: string) {
   return `/admin?success=${encodeURIComponent(message)}`;
 }
 
+async function getClassRecord(classSlug: string | null) {
+  if (!classSlug) return null;
+
+  const serverSupabase = await createClient();
+  const { data } = await serverSupabase
+    .from('classes')
+    .select('id, slug')
+    .eq('slug', classSlug)
+    .maybeSingle();
+
+  return data ?? null;
+}
+
+async function cleanupRoleRecords(adminSupabase: ReturnType<typeof createAdminClient>, userId: string) {
+  const { data: teacher } = await adminSupabase
+    .from('teachers')
+    .select('id')
+    .eq('profile_id', userId)
+    .maybeSingle();
+
+  if (teacher?.id) {
+    await adminSupabase.from('teacher_class_assignments').delete().eq('teacher_id', teacher.id);
+    await adminSupabase.from('teachers').delete().eq('id', teacher.id);
+  }
+
+  await adminSupabase.from('students').delete().eq('profile_id', userId);
+}
+
+async function ensureTeacherAssignment(adminSupabase: ReturnType<typeof createAdminClient>, userId: string, classId: string) {
+  const { data: existingTeacher } = await adminSupabase
+    .from('teachers')
+    .select('id')
+    .eq('profile_id', userId)
+    .maybeSingle();
+
+  let teacherId = existingTeacher?.id ?? null;
+
+  if (!teacherId) {
+    const { data: teacherRow, error } = await adminSupabase
+      .from('teachers')
+      .insert({ profile_id: userId })
+      .select('id')
+      .single();
+
+    if (error || !teacherRow?.id) {
+      throw new Error(error?.message ?? 'Failed to create teacher record.');
+    }
+
+    teacherId = teacherRow.id;
+  }
+
+  await adminSupabase.from('teacher_class_assignments').delete().eq('teacher_id', teacherId);
+
+  const { error: assignmentError } = await adminSupabase.from('teacher_class_assignments').insert({
+    teacher_id: teacherId,
+    class_id: classId,
+  });
+
+  if (assignmentError) {
+    throw new Error(assignmentError.message);
+  }
+}
+
+async function ensureStudentAssignment(
+  adminSupabase: ReturnType<typeof createAdminClient>,
+  userId: string,
+  classId: string,
+  registrationNumber: string,
+) {
+  const { data: existingStudent } = await adminSupabase
+    .from('students')
+    .select('profile_id')
+    .eq('profile_id', userId)
+    .maybeSingle();
+
+  if (existingStudent?.profile_id) {
+    const { error } = await adminSupabase
+      .from('students')
+      .update({ class_id: classId, registration_number: registrationNumber })
+      .eq('profile_id', userId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return;
+  }
+
+  const { error } = await adminSupabase.from('students').insert({
+    profile_id: userId,
+    class_id: classId,
+    registration_number: registrationNumber,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function createUser(formData: FormData) {
   await requireRole(['admin']);
 
@@ -72,15 +171,9 @@ export async function createUser(formData: FormData) {
     redirect(buildError('A profile with that email already exists.'));
   }
 
-  const { data: classRecord, error: classError } = classSlug
-    ? await serverSupabase
-        .from('classes')
-        .select('id, slug')
-        .eq('slug', classSlug)
-        .maybeSingle()
-    : { data: null, error: null };
+  const classRecord = await getClassRecord(classSlug);
 
-  if (classSlug && (classError || !classRecord?.id)) {
+  if (classSlug && !classRecord?.id) {
     redirect(buildError('Selected class could not be found.'));
   }
 
@@ -115,46 +208,111 @@ export async function createUser(formData: FormData) {
     redirect(buildError(profileError.message));
   }
 
-  if (role === 'student' && classRecord?.id) {
-    const { error: studentError } = await adminSupabase.from('students').insert({
-      profile_id: userId,
-      class_id: classRecord.id,
-      registration_number: registrationNumber,
-    });
-
-    if (studentError) {
-      await adminSupabase.from('profiles').delete().eq('id', userId);
-      await adminSupabase.auth.admin.deleteUser(userId);
-      redirect(buildError(studentError.message));
-    }
-  }
-
-  if (role === 'teacher' && classRecord?.id) {
-    const { data: teacherRow, error: teacherError } = await adminSupabase
-      .from('teachers')
-      .insert({ profile_id: userId })
-      .select('id')
-      .single();
-
-    if (teacherError || !teacherRow?.id) {
-      await adminSupabase.from('profiles').delete().eq('id', userId);
-      await adminSupabase.auth.admin.deleteUser(userId);
-      redirect(buildError(teacherError?.message ?? 'Failed to create teacher record.'));
+  try {
+    if (role === 'student' && classRecord?.id && registrationNumber) {
+      await ensureStudentAssignment(adminSupabase, userId, classRecord.id, registrationNumber);
     }
 
-    const { error: assignmentError } = await adminSupabase.from('teacher_class_assignments').insert({
-      teacher_id: teacherRow.id,
-      class_id: classRecord.id,
-    });
-
-    if (assignmentError) {
-      await adminSupabase.from('teachers').delete().eq('id', teacherRow.id);
-      await adminSupabase.from('profiles').delete().eq('id', userId);
-      await adminSupabase.auth.admin.deleteUser(userId);
-      redirect(buildError(assignmentError.message));
+    if (role === 'teacher' && classRecord?.id) {
+      await ensureTeacherAssignment(adminSupabase, userId, classRecord.id);
     }
+  } catch (error) {
+    await cleanupRoleRecords(adminSupabase, userId);
+    await adminSupabase.from('profiles').delete().eq('id', userId);
+    await adminSupabase.auth.admin.deleteUser(userId);
+    redirect(buildError(error instanceof Error ? error.message : 'Failed to finish account setup.'));
   }
 
   revalidatePath('/admin');
   redirect(buildSuccess(`Created ${role} user for ${email}.`));
+}
+
+export async function updateUser(formData: FormData) {
+  await requireRole(['admin']);
+
+  const userId = getString(formData, 'user_id');
+  const role = getString(formData, 'role') as AppRole;
+  const status = getString(formData, 'status') as AppStatus;
+  const classSlug = getOptionalString(formData, 'class_slug');
+  const registrationNumber = getOptionalString(formData, 'registration_number');
+
+  if (!userId) {
+    redirect(buildError('Missing user id.'));
+  }
+
+  if (!VALID_ROLES.includes(role)) {
+    redirect(buildError('Invalid role selected.'));
+  }
+
+  if (!VALID_STATUS.includes(status)) {
+    redirect(buildError('Invalid status selected.'));
+  }
+
+  if ((role === 'student' || role === 'teacher') && !classSlug) {
+    redirect(buildError('Class is required for student and teacher accounts.'));
+  }
+
+  if (role === 'student' && !registrationNumber) {
+    redirect(buildError('Registration number is required for students.'));
+  }
+
+  const adminSupabase = createAdminClient();
+  const classRecord = await getClassRecord(classSlug);
+
+  if (classSlug && !classRecord?.id) {
+    redirect(buildError('Selected class could not be found.'));
+  }
+
+  const { error: profileError } = await adminSupabase
+    .from('profiles')
+    .update({ role, status })
+    .eq('id', userId);
+
+  if (profileError) {
+    redirect(buildError(profileError.message));
+  }
+
+  try {
+    await cleanupRoleRecords(adminSupabase, userId);
+
+    if (role === 'student' && classRecord?.id && registrationNumber) {
+      await ensureStudentAssignment(adminSupabase, userId, classRecord.id, registrationNumber);
+    }
+
+    if (role === 'teacher' && classRecord?.id) {
+      await ensureTeacherAssignment(adminSupabase, userId, classRecord.id);
+    }
+  } catch (error) {
+    redirect(buildError(error instanceof Error ? error.message : 'Failed to update user links.'));
+  }
+
+  revalidatePath('/admin');
+  redirect(buildSuccess('User updated successfully.'));
+}
+
+export async function resetUserPassword(formData: FormData) {
+  await requireRole(['admin']);
+
+  const userId = getString(formData, 'user_id');
+  const password = getString(formData, 'password');
+
+  if (!userId || !password) {
+    redirect(buildError('Missing password reset data.'));
+  }
+
+  if (password.length < 8) {
+    redirect(buildError('New password must be at least 8 characters.'));
+  }
+
+  const adminSupabase = createAdminClient();
+  const { error } = await adminSupabase.auth.admin.updateUserById(userId, {
+    password,
+  });
+
+  if (error) {
+    redirect(buildError(error.message));
+  }
+
+  revalidatePath('/admin');
+  redirect(buildSuccess('Password updated successfully.'));
 }
