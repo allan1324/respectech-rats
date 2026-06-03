@@ -1,7 +1,7 @@
 import { requireRole } from '@/lib/auth';
 import { CLASSES } from '@/lib/classes';
 import { createClient } from '@/lib/supabase/server';
-import { createUser, resetUserPassword, updateUser } from './actions';
+import { createUser, resetUserPassword } from './actions';
 
 type AdminPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -220,8 +220,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       </div>
 
                       <div className="space-y-4">
-                        <form action={updateUser} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-                          <input type="hidden" name="intent" value="update-user" />
+                        <form method="POST" action="/api/admin/users/update" className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
                           <input type="hidden" name="user_id" value={user.id} />
                           <div className="grid gap-4 md:grid-cols-2">
                             <div>
