@@ -108,12 +108,12 @@ async function ensureStudentAssignment(
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const userId = String(body.user_id ?? '').trim();
-    const role = String(body.role ?? '').trim() as AppRole;
-    const status = String(body.status ?? '').trim() as AppStatus;
-    const classSlugRaw = String(body.class_slug ?? '').trim();
-    const registrationNumberRaw = String(body.registration_number ?? '').trim();
+    const formData = await req.formData();
+    const userId = String(formData.get('user_id') ?? '').trim();
+    const role = String(formData.get('role') ?? '').trim() as AppRole;
+    const status = String(formData.get('status') ?? '').trim() as AppStatus;
+    const classSlugRaw = String(formData.get('class_slug') ?? '').trim();
+    const registrationNumberRaw = String(formData.get('registration_number') ?? '').trim();
     const classSlug = classSlugRaw || null;
     const registrationNumber = registrationNumberRaw || null;
 
