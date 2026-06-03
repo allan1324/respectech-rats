@@ -280,20 +280,32 @@ export async function updateUser(formData: FormData) {
   }
 
   try {
+    console.log('[admin.updateUser] starting update', { userId, role, status, classSlug, hasRegistrationNumber: Boolean(registrationNumber) });
+
     await cleanupRoleRecords(adminSupabase, userId);
+    console.log('[admin.updateUser] cleaned old role records', { userId });
 
     if (role === 'student' && classRecord?.id && registrationNumber) {
       await ensureStudentAssignment(adminSupabase, userId, classRecord.id, registrationNumber);
+      console.log('[admin.updateUser] ensured student assignment', { userId, classId: classRecord.id });
     }
 
     if (role === 'teacher' && classRecord?.id) {
       await ensureTeacherAssignment(adminSupabase, userId, classRecord.id);
+      console.log('[admin.updateUser] ensured teacher assignment', { userId, classId: classRecord.id });
     }
 
-    const { error: profileError } = await adminSupabase
+    const { error: profileError, data: updatedProfiles } = await adminSupabase
       .from('profiles')
       .update({ role, status })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select('id, role, status');
+
+    console.log('[admin.updateUser] profile update response', {
+      userId,
+      profileError: profileError?.message ?? null,
+      updatedProfiles,
+    });
 
     if (profileError) {
       throw new Error(profileError.message);
@@ -305,6 +317,12 @@ export async function updateUser(formData: FormData) {
       .eq('id', userId)
       .maybeSingle();
 
+    console.log('[admin.updateUser] verified profile', {
+      userId,
+      verifiedProfileError: verifiedProfileError?.message ?? null,
+      verifiedProfile,
+    });
+
     if (verifiedProfileError || !verifiedProfile?.id) {
       throw new Error(verifiedProfileError?.message ?? 'Updated profile could not be verified.');
     }
@@ -314,6 +332,7 @@ export async function updateUser(formData: FormData) {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to update user.';
+    console.error('[admin.updateUser] failed', { userId, role, status, classSlug, message });
     redirect(buildError(message));
   }
 
