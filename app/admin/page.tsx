@@ -2,6 +2,7 @@ import { requireRole } from '@/lib/auth';
 import { CLASSES } from '@/lib/classes';
 import { createClient } from '@/lib/supabase/server';
 import { createUser, resetUserPassword } from './actions';
+import { UpdateUserForm } from './UpdateUserForm';
 
 type AdminPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -220,49 +221,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       </div>
 
                       <div className="space-y-4">
-                        <form method="POST" action="/api/admin/users/update" className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-                          <input type="hidden" name="user_id" value={user.id} />
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <div>
-                              <label className="mb-2 block text-xs uppercase tracking-wide text-zinc-400">Role</label>
-                              <select name="role" defaultValue={user.role} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-indigo-500">
-                                <option value="student">Student</option>
-                                <option value="teacher">Teacher</option>
-                                <option value="admin">Admin</option>
-                              </select>
-                            </div>
-                            <div>
-                              <label className="mb-2 block text-xs uppercase tracking-wide text-zinc-400">Status</label>
-                              <select name="status" defaultValue={user.status} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-indigo-500">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="suspended">Suspended</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <div>
-                              <label className="mb-2 block text-xs uppercase tracking-wide text-zinc-400">Class</label>
-                              <select name="class_slug" defaultValue={resolvedClassSlug} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-indigo-500">
-                                <option value="">No class</option>
-                                {classOptions.map((classItem) => (
-                                  <option key={`${user.id}-${classItem.slug}`} value={classItem.slug}>{classItem.name}</option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="mb-2 block text-xs uppercase tracking-wide text-zinc-400">Registration number</label>
-                              <input name="registration_number" defaultValue={resolvedRegistration} className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none focus:border-indigo-500" />
-                            </div>
-                          </div>
-
-                          <div className="flex justify-end">
-                            <button type="submit" name="intent" value="update-user" className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-200">
-                              Save changes
-                            </button>
-                          </div>
-                        </form>
+                        <UpdateUserForm
+                          userId={user.id}
+                          initialRole={user.role}
+                          initialStatus={user.status}
+                          initialClassSlug={resolvedClassSlug}
+                          initialRegistrationNumber={resolvedRegistration}
+                          classOptions={classOptions}
+                        />
 
                         <form action={resetUserPassword} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
                           <input type="hidden" name="user_id" value={user.id} />
