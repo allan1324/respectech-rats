@@ -219,8 +219,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                         </div>
                       </div>
 
-                      <div className="grid gap-4 xl:grid-cols-[1.4fr,0.9fr]">
+                      <div className="space-y-4">
                         <form action={updateUser} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+                          <input type="hidden" name="intent" value="update-user" />
                           <input type="hidden" name="user_id" value={user.id} />
                           <div className="grid gap-4 md:grid-cols-2">
                             <div>
@@ -258,7 +259,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                           </div>
 
                           <div className="flex justify-end">
-                            <button type="submit" className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-200">
+                            <button type="submit" name="intent" value="update-user" className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-200">
                               Save changes
                             </button>
                           </div>

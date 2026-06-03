@@ -230,6 +230,11 @@ export async function createUser(formData: FormData) {
 export async function updateUser(formData: FormData) {
   await requireRole(['admin']);
 
+  const intent = getString(formData, 'intent');
+  if (intent !== 'update-user') {
+    redirect(buildError('Update form submission was not received correctly.'));
+  }
+
   const userId = getString(formData, 'user_id');
   const role = getString(formData, 'role') as AppRole;
   const status = getString(formData, 'status') as AppStatus;
